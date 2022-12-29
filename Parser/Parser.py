@@ -8,7 +8,7 @@ from lxml import html
 import re
 
 
-chromedriver_path = 'D:/ML/ML_Projects/Tinkoff_Pulse_Emotion_Analyzer/chromedriver_win32/chromedriver.exe'
+chromedriver_path = 'D:/ML/ML_Projects/Tinkoff_Pulse_Emotion_Analyzer/Parser/chromedriver_win32/chromedriver.exe'
 driver = webdriver.Chrome(executable_path=chromedriver_path)
 
 driver.get(f'https://www.tinkoff.ru/invest/pulse/')
@@ -39,7 +39,7 @@ try:
         df_posts['post'] = posts
         df_posts['likes'] = likes
 
-        df_posts.to_csv('posts.csv', index=False)
+        df_posts.to_csv('Parser/posts.csv', index=False)
 
         print('SAVED')
 except Exception as E:
