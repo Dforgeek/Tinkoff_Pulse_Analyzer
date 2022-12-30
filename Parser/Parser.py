@@ -1,4 +1,6 @@
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+
 import time
 from bs4 import BeautifulSoup as bs
 import pandas as pd
@@ -8,8 +10,10 @@ from lxml import html
 import re
 
 
-chromedriver_path = 'D:/ML/ML_Projects/Tinkoff_Pulse_Emotion_Analyzer/Parser/chromedriver_win32/chromedriver.exe'
-driver = webdriver.Chrome(executable_path=chromedriver_path)
+chromedriver_path = '/chromedriver_win32/chromedriver.exe'
+chrome_service = ChromeService(executable_path=chromedriver_path)
+chrome_service.start()
+driver = webdriver.Chrome(service=chrome_service)
 
 driver.get(f'https://www.tinkoff.ru/invest/pulse/')
 
@@ -24,11 +28,13 @@ try:
         source_data = driver.page_source
         soup = bs(source_data, 'lxml')
 
-        post_click = soup.find_all("div", {'class': ["PulseReviewAndNewsBody__title_SzTYH", "PulsePostBody__clickable_ygAE0"]})
+        post_click = soup.find_all("div", {'class': ["PulseReviewAndNewsBody__title_SzTYH",
+                                                     "PulsePostBody__clickable_ygAE0"]})
 
         for post in post_click:
-            if post != None:
-                print("NOT none")
+            print(type(post))
+            if post.is_displayed():
+                print("disp")
             post.click()
             driver.implicitly_wait(10)
 
