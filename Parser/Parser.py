@@ -7,7 +7,8 @@ import os
 from lxml import html
 import re
 
-
+os.chdir('D:/ML/ML_Projects/Tinkoff_Pulse_Emotion_Analyzer/Parser/')
+print(os.getcwd())
 chromedriver_path = 'D:/ML/ML_Projects/Tinkoff_Pulse_Emotion_Analyzer/Parser/chromedriver_win32/chromedriver.exe'
 driver = webdriver.Chrome(executable_path=chromedriver_path)
 
@@ -15,58 +16,58 @@ driver.get(f'https://www.tinkoff.ru/invest/pulse/')
 
 page_length = driver.execute_script("return document.body.scrollHeight")
 
+while page_length < 50000:
+    driver.execute_script(f"window.scrollTo(0, {page_length - 1000});")
+    page_length = driver.execute_script("return document.body.scrollHeight")
 
-try:
-    while page_length < 50000:
-        driver.execute_script(f"window.scrollTo(0, {page_length - 1000});")
-        page_length = driver.execute_script("return document.body.scrollHeight")
+    source_data = driver.page_source
+    soup = bs(source_data, 'lxml')
 
-        source_data = driver.page_source
-        soup = bs(source_data, 'lxml')
+    post_all = soup.find_all("div", {'data-qa-tag': "PulsePost"})
 
-        post_click = soup.find_all("div", {'class': ["PulseReviewAndNewsBody__title_SzTYH", "PulsePostBody__clickable_ygAE0"]})
+    posts_text = []
+    posts_publishers = []
+    reactions_number = []
+    comments_numbers = []
 
-        for post in post_click:
-            if post != None:
-                print("NOT none")
-            post.click()
-            driver.implicitly_wait(10)
+    for i in post_all:
+        print(i.attrs)
+        print("post_ID: " + i['data-post-id'])
+        author = i.find('a', {'data-qa-type': "uikit/link"}, source=i)
+        print("AuthorLink: " + author['href'] + "//n")
+        post_url = "https://www.tinkoff.ru" + author['href'] + i['data-post-id'] + '/'
 
-            post_text = post.text
-            print("OK")
-            driver.back()
+        response = requests.get(post_url)
+        html_content = response.text
 
+        # parse the HTML content
+        soup_inner = bs(html_content, 'html5lib', from_encoding='utf-8')
+        print(soup_inner.prettify())
 
-        posts = soup.find_all("div", {'class': ["TextLineCollapse__text_LXa9s",
-                                                "PulseReviewAndNewsBody__announce_tXACb",
-                                                "PulsePostReviewBody__text_cLzKB"]})
-        publisher = soup.find_all('div', {'class': 'PulsePostAuthor__nicknameLink_pmYg4'})
-        reactions = soup.find_all("div", class_="PulsePostReactions__countReactions_vtahc")
-        comments = soup.find_all("div", class_="PulsePost__commentText_WiLNw")
+        post = soup_inner.find_all("div", {'class': ['TextLineCollapse__text_LXa9s', 'PulsePostReviewBody__text_cLzKB']})
+        reactions = soup_inner.find_all("div", class_="PulsePostReactions__countReactions_fSXGM")
+        comments = soup_inner.find_all("div", class_="PulsePostReactions__commentText_xvZNw")
 
-        posts = [post.text for post in posts]
-        publishers = [login.text for login in publisher]
-        reactions_number = [int(reaction.text) for reaction in reactions]
+        post = post.text
+        publisher = author['href'].split('/')[4]
+        react_number = reactions.text
 
-        comments_number = []
-        for comment in comments:
-            if comment.text == 'Комментировать':
-                comments_number.append(0)
-            else:
-                comments_number.append(int(comment.text))
+        if comments.text == 'Комментировать':
+            comments_number = 0
+        else:
+            comments_number = comments.text
 
-        df_posts = pd.DataFrame()
-        df_posts['text'] = posts
-        df_posts['publisher'] = publishers
-        df_posts['reactions'] = reactions_number
-        df_posts['comments'] = comments_number
+        posts_text.append(post)
+        posts_publishers.append(publisher)
+        reactions_number.append(react_number)
+        comments_numbers.append(comments_number)
 
-        df_posts.to_csv('Parser/posts.csv', index=False)
+    df_posts = pd.DataFrame()
+    df_posts['text'] = posts_text
+    df_posts['publisher'] = posts_publishers
+    df_posts['reaction'] = reactions_number
+    df_posts['comment'] = comments_numbers
 
-        print('SAVED')
-except Exception as E:
-    print(E)
+    df_posts.to_csv('posts.csv', index=False)
 
-
-
-
+    print('SAVED')
