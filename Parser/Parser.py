@@ -1,58 +1,66 @@
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service as ChromeService
-import time
 from bs4 import BeautifulSoup as bs
 import pandas as pd
 import requests
 import os
-from lxml import html
-import re
-import sys
+import DateParser
 
-chromedriver_path = '/chromedriver_win32/chromedriver.exe'
-chrome_service = ChromeService(executable_path=chromedriver_path)
-chrome_service.start()
-driver = webdriver.Chrome(service=chrome_service)
+
+print(os.getcwd())
+chromedriver_path = 'chromedriver_win32/chromedriver.exe'
+driver = webdriver.Chrome(executable_path=chromedriver_path)
 
 driver.get(f'https://www.tinkoff.ru/invest/pulse/')
 
 page_length = driver.execute_script("return document.body.scrollHeight")
 
+posts_id = []
+publish_date = []
 posts_text = []
 posts_publishers = []
 reactions_number = []
 comments_numbers = []
-post_all = 0
-while page_length < 50000:
-    driver.execute_script(f"window.scrollTo(0, {page_length - 500});")
+unique_id_set = set()
+
+while page_length < 5000:
+    driver.execute_script(f"window.scrollTo(0, {page_length - 1000});")
     page_length = driver.execute_script("return document.body.scrollHeight")
 
-    source_data = driver.page_source
-    soup = bs(source_data, 'lxml')
-
-    post_all = soup.find_all("div", {'data-qa-tag': "PulsePost"})
+source_data = driver.page_source
+soup = bs(source_data, 'lxml')
+post_all = soup.find_all("div", {'data-qa-tag': "PulsePost"})
+post_found = len(post_all)
+print("Posts found: ", post_found)
 
 for i in post_all:
     print(i.attrs)
-    print("post_ID: " + i['data-post-id'])
+    post_id = i['data-post-id']
+    print("post_ID: " + post_id)
     author = i.find('a', {'data-qa-type': "uikit/link"}, source=i)
-    print("AuthorLink: " + author['href'] + "//n")
-    post_url = "https://www.tinkoff.ru" + author['href'] + i['data-post-id'] + '/'
+    print("AuthorLink: " + author['href'] + "\n")
+    post_url = "https://www.tinkoff.ru" + author['href'] + post_id + '/'
+    unique_id_set.add(post_id)
 
-    response = requests.get(post_url)
+    try:
+        response = requests.get(post_url)
+    except requests.exceptions.Timeout:
+        print("Timeout error on this URL: ", post_url)
+    except requests.exceptions.TooManyRedirects:
+        print("TooManyRedirects error on this URL: ", post_url)
+    except requests.exceptions.RequestException as e:
+        raise SystemExit(e)
+
     response.encoding = 'utf-8'
     html_content = response.text
-    # print("HTML CONTENT: ", html_content)
-    # parse the HTML content
     soup_inner = bs(html_content, 'html.parser')
-    # print(soup_inner.prettify())
 
     post = soup_inner.find("div", {'class': ['TextLineCollapse__text_LXa9s', 'PulsePostReviewBody__text_cLzKB']})
+    date = soup_inner.find("div", class_="PulsePostAuthor__inserted_OW9vN")
     reactions = soup_inner.find("div", class_="PulsePostReactions__countReactions_fSXGM")
     comments = soup_inner.find("div", class_="PulsePostReactions__commentText_xvZNw")
 
     post = post.text
-    # print(post)
+    date = DateParser.string_to_date(date.text)
     publisher = author['href'].split('/')[4]
     react_number = reactions.text
 
@@ -61,21 +69,26 @@ for i in post_all:
     else:
         comments_number = comments.text
 
+    posts_id.append(post_id)
+    publish_date.append(date)
     posts_text.append(post)
     posts_publishers.append(publisher)
     reactions_number.append(react_number)
     comments_numbers.append(comments_number)
 
-    print("SPECIFIC POST WAS READ\n")
+    print("POST WAS SCRAPED\n")
 
-print("SCROLLING\nSCROLLING\n")
+print("Post was found:", post_found)
+print("Unique posts:", len(unique_id_set))
+print("Posts scraped:", len(posts_id))
 
 df_posts = pd.DataFrame()
+df_posts['id'] = posts_id
+df_posts['date'] = publish_date
 df_posts['text'] = posts_text
 df_posts['publisher'] = posts_publishers
 df_posts['reaction'] = reactions_number
 df_posts['comment'] = comments_numbers
-df_posts = df_posts.drop_duplicates()
 df_posts.to_excel('posts.xlsx', encoding='UTF-8')
 
 print('SAVED')
