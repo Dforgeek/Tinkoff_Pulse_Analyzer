@@ -8,8 +8,19 @@ import DateParser
 
 print(os.getcwd())
 chromedriver_path = 'chromedriver_win32/chromedriver.exe'
-driver = webdriver.Chrome(executable_path=chromedriver_path)
 
+# add options to driver
+options = webdriver.ChromeOptions()
+options.add_argument("start-maximized")
+options.add_argument("disable-infobars")
+options.add_argument("--disable-extensions")
+options.add_argument('--no-sandbox')
+options.add_argument('--disable-application-cache')
+options.add_argument('--disable-gpu')
+options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--disable-images")
+
+driver = webdriver.Chrome(executable_path=chromedriver_path, options=options)
 driver.get(f'https://www.tinkoff.ru/invest/pulse/')
 
 page_length = driver.execute_script("return document.body.scrollHeight")
@@ -33,11 +44,11 @@ post_found = len(post_all)
 print("Posts found: ", post_found)
 
 for i in post_all:
-    print(i.attrs)
+    #print(i.attrs)
     post_id = i['data-post-id']
     print("post_ID: " + post_id)
     author = i.find('a', {'data-qa-type': "uikit/link"}, source=i)
-    print("AuthorLink: " + author['href'] + "\n")
+    print("AuthorLink: " + author['href'])
     post_url = "https://www.tinkoff.ru" + author['href'] + post_id + '/'
     unique_id_set.add(post_id)
 
@@ -61,6 +72,7 @@ for i in post_all:
 
     post = post.text
     date = DateParser.string_to_date(date.text)
+    print("Post date:" + str(date) + "\n")
     publisher = author['href'].split('/')[4]
     react_number = reactions.text
 
