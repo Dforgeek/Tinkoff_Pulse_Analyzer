@@ -33,8 +33,8 @@ reactions_number = []
 comments_numbers = []
 unique_id_set = set()
 
-while page_length < 5000:
-    driver.execute_script(f"window.scrollTo(0, {page_length - 1000});")
+while page_length < 2000000:
+    driver.execute_script(f"window.scrollTo(0, {page_length - 1300});")
     page_length = driver.execute_script("return document.body.scrollHeight")
 
 source_data = driver.page_source

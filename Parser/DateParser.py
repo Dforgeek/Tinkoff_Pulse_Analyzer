@@ -7,7 +7,7 @@ def month_number(month: str) -> int:
         'фев': 2,
         'мар': 3,
         'апр': 4,
-        'май': 5,
+        'мая': 5,
         'июн': 6,
         'июл': 7,
         'авг': 8,
@@ -32,4 +32,4 @@ def string_to_date(date_str: str) -> datetime:
     else:
         date = datetime.datetime.now()
     return date
-# PulsePostAuthor__inserted_OW9vN
+
